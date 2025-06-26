@@ -1,0 +1,114 @@
+apiVersion: admin.gloo.solo.io/v2
+kind: IstioLifecycleManager
+metadata:
+  labels:
+  name: gw-ilm
+  namespace: gloo-mesh
+spec:
+  installations:
+    - clusters:
+        - defaultRevision: true
+          name: cluster1
+      istioOperatorSpec:
+        components:
+          ingressGateways:
+            - enabled: false
+              name: istio-ingressgateway
+          pilot:
+            k8s:
+              env:
+                - name: PILOT_ENABLE_K8S_SELECT_WORKLOAD_ENTRIES
+                  value: 'false'
+              hpaSpec:
+                maxReplicas: 15
+                metrics:
+                  - resource:
+                      name: cpu
+                      target:
+                        averageUtilization: 80
+                        type: Utilization
+                    type: Resource
+                minReplicas: 3
+                scaleTargetRef:
+                  apiVersion: apps/v1
+                  kind: Deployment
+                  name: istiod-1-22-8
+              podAnnotations:
+                ad.datadoghq.com/discovery.checks: >-
+                  { "istio": { "instances": [ { "istiod_endpoint":
+                  "http://%%host%%:15014/metrics", "use_openmetrics": "true" } ]
+                  } }
+                karpenter.sh/do-not-disrupt: 'true'
+              priorityClassName: system-cluster-critical
+              resources:
+                limits:
+                  cpu: 1000m
+                  memory: 1Gi
+                requests:
+                  cpu: 1000m
+                  memory: 1Gi
+        hub: us-docker.pkg.dev/gloo-mesh/istio-a9ee4fe9f69a
+        meshConfig:
+          accessLogEncoding: JSON
+          accessLogFile: /dev/stdout
+          accessLogFormat: |2-
+                {
+                    "start_time": "[%START_TIME%]",
+                    "method": "%REQ(:METHOD)%",
+                    "path": "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%",
+                    "protocol": "%PROTOCOL%",
+                    "response_code": "%RESPONSE_CODE%",
+                    "response_flags": "%RESPONSE_FLAGS%",
+                    "response_code_details": "%RESPONSE_CODE_DETAILS%",
+                    "connection_termination_details": "%CONNECTION_TERMINATION_DETAILS%",
+                    "upstream_transport_failure_reason": "%UPSTREAM_TRANSPORT_FAILURE_REASON%",
+                    "bytes_received": "%BYTES_RECEIVED%",
+                    "bytes_sent": "%BYTES_SENT%",
+                    "duration": "%DURATION%",
+                    "upstream_service_time": "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%",
+                    "x_forwarded_for": "%REQ(X-FORWARDED-FOR)%",
+                    "user_agent": "%REQ(USER-AGENT)%",
+                    "request_id": "%REQ(X-REQUEST-ID)%",
+                    "authority": "%REQ(:AUTHORITY)%",
+                    "upstream_host": "%UPSTREAM_HOST%",
+                    "upstream_cluster": "%UPSTREAM_CLUSTER%",
+                    "upstream_local_address": "%UPSTREAM_LOCAL_ADDRESS%",
+                    "downstream_local_address": "%DOWNSTREAM_LOCAL_ADDRESS%",
+                    "downstream_remote_address": "%DOWNSTREAM_REMOTE_ADDRESS%",
+                    "requested_server_name": "%REQUESTED_SERVER_NAME%",
+                    "access_log_type": "%ACCESS_LOG_TYPE%",
+                    "route_name": "%ROUTE_NAME%",
+                    "referer": "%REQ(REFERER)%",
+                    "true_client_ip": "%REQ(True-Client-IP)%",
+                    "x_datadog_trace_id": "%REQ(x-datadog-trace-id)%",
+                    "x_datadog_parent_id": "%REQ(x-datadog-parent-id)%",
+                    "x_datadog_sampling_priority": "%REQ(x-datadog-sampling-priority)%",
+                    "x_datadog_origin": "%REQ(x-datadog-origin)%",
+                    "x_datadog_tags": "%REQ(x-datadog-tags)%"
+                }
+          defaultConfig:
+            holdApplicationUntilProxyStarts: true
+            proxyMetadata:
+              DD_REMOTE_CONFIGURATION_ENABLED: 'false'
+              ISTIO_META_DNS_AUTO_ALLOCATE: 'true'
+              ISTIO_META_DNS_CAPTURE: 'true'
+            tracing:
+              sampling: 100
+          dnsRefreshRate: 240s
+          enableTracing: true
+          outboundTrafficPolicy:
+            mode: ALLOW_ANY
+          rootNamespace: istio-system
+        namespace: istio-system
+        profile: minimal
+        tag: 1.22.8-solo
+        values:
+          global:
+            meshID: platform-mesh
+            multiCluster:
+              clusterName: cluster1
+            network: cluster1
+            proxy:
+              tracer: datadog
+      revision: 1-22-8
+      skipUpgradeValidation: true
