@@ -7,8 +7,6 @@ spec:
   selector:
     app: istio-eastwestgateway
     istio: eastwestgateway
-    revision: 1-22-8
-    topology.istio.io/network: cluster1
   type: LoadBalancer
   ports:
   - name: status-port
