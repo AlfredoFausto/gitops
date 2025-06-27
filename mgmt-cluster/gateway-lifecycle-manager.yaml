@@ -1,0 +1,51 @@
+apiVersion: admin.gloo.solo.io/v2
+kind: GatewayLifecycleManager
+metadata:
+  labels:
+    app.kubernetes.io/instance: gloomesh-management-plane
+  name: istio-eastwestgateway-we12i14s
+  namespace: gloo-mesh
+spec:
+  installations:
+  - clusters:
+    - activeGateway: false
+      name: cluster1
+    gatewayRevision: 1-22-8
+    istioOperatorSpec:
+      components:
+        ingressGateways:
+        - enabled: true
+          k8s:
+            env:
+            - name: ISTIO_META_ROUTER_MODE
+              value: sni-dnat
+            - name: ISTIO_META_REQUESTED_NETWORK_VIEW
+              value: cluster1
+          label:
+            app: istio-eastwestgateway
+            istio: eastwestgateway
+            topology.istio.io/network: cluster1
+          name: istio-eastwestgateway
+          namespace: gloo-mesh-gateways
+      hub: us-docker.pkg.dev/gloo-mesh/istio-a9ee4fe9f69a
+      namespace: istio-system
+      profile: empty
+      tag: 1.22.8-solo
+      values:
+        gateways:
+          istio-ingressgateway:
+            autoscaleEnabled: false
+            customService: true
+            replicaCount: 2
+            resources:
+              limits:
+                cpu: 2000m
+                memory: 2Gi
+              requests:
+                cpu: 100m
+                memory: 128Mi
+        global:
+          istioNamespace: istio-system
+          multiCluster:
+            clusterName: cluster1
+          network: cluster1
